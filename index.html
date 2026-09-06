@@ -1,87 +1,360 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Milk Bill Calculator</title>
-    <meta property="og:image" content="https://bolt.new/static/og_default.png">
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:image" content="https://bolt.new/static/og_default.png">
+    <style>
+        :root {
+            --primary: #2563eb; --bg: #f8fafc; --surface: #ffffff;
+            --border: #e2e8f0; --text: #0f172a; --text-light: #64748b;
+            --success: #10b981; --danger: #ef4444; --warning: #f59e0b;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: var(--bg); color: var(--text); padding-bottom: 2rem; }
+        header { background: var(--primary); color: white; padding: 1rem; text-align: center; }
+        .container { max-width: 600px; margin: 0 auto; padding: 1rem; }
+        .card { background: var(--surface); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; cursor: pointer; }
+        h2 { font-size: 1.25rem; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .input-group { display: flex; flex-direction: column; }
+        .input-group label { font-size: 0.875rem; color: var(--text-light); margin-bottom: 0.25rem; }
+        .input-group input { padding: 0.5rem; border: 1px solid var(--border); border-radius: 4px; font-size: 1rem; }
+        .calendar-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        .calendar-controls select { padding: 0.5rem; font-size: 1rem; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem; }
+        .day-btn { aspect-ratio: 1; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .day-btn span { font-size: 0.7rem; font-weight: normal; margin-top: 2px; }
+        .state-default { background: #e0e7ff; color: var(--primary); }
+        .state-none { background: #fee2e2; color: var(--danger); text-decoration: line-through; }
+        .state-custom { background: #fef3c7; color: var(--warning); }
+        .btn { padding: 0.75rem 1rem; border: none; border-radius: 4px; font-size: 1rem; font-weight: bold; cursor: pointer; width: 100%; text-align: center; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-outline { background: transparent; border: 1px solid var(--primary); color: var(--primary); }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 10; }
+        .modal { background: white; padding: 1.5rem; border-radius: 8px; width: 90%; max-width: 400px; }
+        .modal.active { display: flex; }
+        #billOutput { background: #1e293b; color: #f8fafc; padding: 1rem; border-radius: 8px; font-family: monospace; white-space: pre-wrap; font-size: 0.9rem; overflow-x: auto; }
+        .hidden { display: none; }
+    </style>
 </head>
-  <body>
-    <header>
-      <h1>Milk Bill Calculator</h1>
-    </header>
+<body>
 
-    <div class="container">
-      <div class="card">
-        <div class="card-header" id="settingsHeader">
-          <h2>⚙️ Settings &amp; Defaults</h2>
-          <span id="settingsToggle">▼</span>
+<header>
+    <h1>Milk Bill Calculator</h1>
+</header>
+
+<div class="container">
+    <div class="card">
+        <div class="card-header" onclick="toggleSettings()">
+            <h2>⚙️ Settings & Defaults</h2>
+            <span id="settingsToggle">▼</span>
         </div>
         <div id="settingsContent" class="hidden">
-          <div class="form-grid" style="margin-bottom: 1rem;">
-            <div class="input-group"><label>Customer Name</label><input type="text" id="custName" value="Farook" /></div>
-            <div class="input-group"><label>Address Info</label><input type="text" id="custAddress" value="1st Street" /></div>
-            <div class="input-group"><label>Monthly Charge (₹)</label><input type="number" id="monthlyCharge" value="20" /></div>
-          </div>
+            <div class="form-grid" style="margin-bottom: 1rem;">
+                <div class="input-group"><label>Customer Name</label><input type="text" id="custName" value="Farook"></div>
+                <div class="input-group"><label>Address Info</label><input type="text" id="custAddress" value="1st Street"></div>
+                <div class="input-group"><label>Monthly Charge (₹)</label><input type="number" id="monthlyCharge" value="20"></div>
+            </div>
+            
+            <h3 style="font-size: 1rem; margin-bottom: 0.5rem;">Packet Prices (₹)</h3>
+            <div class="form-grid" style="margin-bottom: 1rem;">
+                <div class="input-group"><label>Green</label><input type="number" id="priceGreen" value="25"></div>
+                <div class="input-group"><label>Blue</label><input type="number" id="priceBlue" value="22"></div>
+                <div class="input-group"><label>Orange</label><input type="number" id="priceOrange" value="30"></div>
+                <div class="input-group"><label>Purple</label><input type="number" id="pricePurple" value="35"></div>
+            </div>
 
-          <h3 style="font-size: 1rem; margin-bottom: 0.5rem;">Packet Prices (₹)</h3>
-          <div class="form-grid" style="margin-bottom: 1rem;">
-            <div class="input-group"><label>Green</label><input type="number" id="priceGreen" value="25" /></div>
-            <div class="input-group"><label>Blue</label><input type="number" id="priceBlue" value="22" /></div>
-            <div class="input-group"><label>Orange</label><input type="number" id="priceOrange" value="30" /></div>
-            <div class="input-group"><label>Purple</label><input type="number" id="pricePurple" value="35" /></div>
-          </div>
-
-          <h3 style="font-size: 1rem; margin-bottom: 0.5rem;">Default Daily Order (Qty)</h3>
-          <div class="form-grid" style="margin-bottom: 1rem;">
-            <div class="input-group"><label>Green</label><input type="number" id="defGreen" value="3" /></div>
-            <div class="input-group"><label>Blue</label><input type="number" id="defBlue" value="0" /></div>
-            <div class="input-group"><label>Orange</label><input type="number" id="defOrange" value="0" /></div>
-            <div class="input-group"><label>Purple</label><input type="number" id="defPurple" value="0" /></div>
-          </div>
-          <button class="btn btn-outline" id="saveSettingsBtn">Save Settings</button>
+            <h3 style="font-size: 1rem; margin-bottom: 0.5rem;">Default Daily Order (Qty)</h3>
+            <div class="form-grid" style="margin-bottom: 1rem;">
+                <div class="input-group"><label>Green</label><input type="number" id="defGreen" value="3"></div>
+                <div class="input-group"><label>Blue</label><input type="number" id="defBlue" value="0"></div>
+                <div class="input-group"><label>Orange</label><input type="number" id="defOrange" value="0"></div>
+                <div class="input-group"><label>Purple</label><input type="number" id="defPurple" value="0"></div>
+            </div>
+            <button class="btn btn-outline" onclick="saveSettings()">Save Settings</button>
         </div>
-      </div>
+    </div>
 
-      <div class="card">
+    <div class="card">
         <div class="calendar-controls">
-          <select id="monthSelect"></select>
-          <select id="yearSelect"></select>
+            <select id="monthSelect"></select>
+            <select id="yearSelect"></select>
         </div>
         <div style="font-size: 0.8rem; text-align: center; margin-bottom: 1rem; color: var(--text-light);">
-          Tap once for 'No Milk'. Tap again for 'Custom Order'.
+            Tap once for 'No Milk'. Tap again for 'Custom Order'.
         </div>
-        <div id="weekdayLabels" class="calendar-grid" style="margin-bottom: 0.5rem;"></div>
         <div id="calendar" class="calendar-grid"></div>
-      </div>
+    </div>
 
-      <button class="btn btn-primary" style="margin-bottom: 1rem;" id="generateBtn">Generate Bill</button>
+    <button class="btn btn-primary" style="margin-bottom: 1rem;" onclick="generateBill()">Generate Bill</button>
 
-      <div class="card" id="resultCard" style="display: none;">
+    <div class="card" id="resultCard" style="display: none;">
         <h2>Generated Bill</h2>
         <pre id="billOutput"></pre>
-        <button class="btn btn-outline" style="margin-top: 1rem;" id="copyBtn">📋 Copy Bill Text</button>
-      </div>
+        <button class="btn btn-outline" style="margin-top: 1rem;" onclick="copyBill()">📋 Copy Bill Text</button>
     </div>
+</div>
 
-    <div class="modal-overlay" id="customModal">
-      <div class="modal">
+<div class="modal-overlay" id="customModal">
+    <div class="modal">
         <h2 style="margin-bottom: 1rem;">Custom Order for Day <span id="modalDay"></span></h2>
         <div class="form-grid" style="margin-bottom: 1.5rem;">
-          <div class="input-group"><label>Green Qty</label><input type="number" id="modGreen" value="0" /></div>
-          <div class="input-group"><label>Blue Qty</label><input type="number" id="modBlue" value="0" /></div>
-          <div class="input-group"><label>Orange Qty</label><input type="number" id="modOrange" value="0" /></div>
-          <div class="input-group"><label>Purple Qty</label><input type="number" id="modPurple" value="0" /></div>
+            <div class="input-group"><label>Green Qty</label><input type="number" id="modGreen" value="0"></div>
+            <div class="input-group"><label>Blue Qty</label><input type="number" id="modBlue" value="0"></div>
+            <div class="input-group"><label>Orange Qty</label><input type="number" id="modOrange" value="0"></div>
+            <div class="input-group"><label>Purple Qty</label><input type="number" id="modPurple" value="0"></div>
         </div>
         <div style="display: flex; gap: 1rem;">
-          <button class="btn btn-outline" id="cancelModalBtn">Cancel</button>
-          <button class="btn btn-primary" id="saveCustomBtn">Save</button>
+            <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="saveCustomOrder()">Save</button>
         </div>
-      </div>
     </div>
+</div>
 
-    <script type="module" src="/main.js"></script>
-  </body>
+<script>
+    let state = {
+        month: new Date().getMonth(),
+        year: new Date().getFullYear(),
+        daysData: {} 
+    };
+
+    let activeModalDay = null;
+    const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+    function init() {
+        populateSelectors();
+        loadSettings();
+        buildCalendar();
+    }
+
+    function toggleSettings() {
+        const content = document.getElementById('settingsContent');
+        const toggle = document.getElementById('settingsToggle');
+        if (content.classList.contains('hidden')) {
+            content.classList.remove('hidden');
+            toggle.innerText = '▲';
+        } else {
+            content.classList.add('hidden');
+            toggle.innerText = '▼';
+        }
+    }
+
+    function saveSettings() {
+        const settings = {
+            custName: document.getElementById('custName').value,
+            custAddress: document.getElementById('custAddress').value,
+            monthlyCharge: parseInt(document.getElementById('monthlyCharge').value) || 0,
+            prices: {
+                green: parseInt(document.getElementById('priceGreen').value) || 0,
+                blue: parseInt(document.getElementById('priceBlue').value) || 0,
+                orange: parseInt(document.getElementById('priceOrange').value) || 0,
+                purple: parseInt(document.getElementById('pricePurple').value) || 0,
+            },
+            defaults: {
+                green: parseInt(document.getElementById('defGreen').value) || 0,
+                blue: parseInt(document.getElementById('defBlue').value) || 0,
+                orange: parseInt(document.getElementById('defOrange').value) || 0,
+                purple: parseInt(document.getElementById('defPurple').value) || 0,
+            }
+        };
+        localStorage.setItem('milkBillSettings', JSON.stringify(settings));
+        toggleSettings();
+        alert("Settings saved!");
+    }
+
+    function getSettings() {
+        const saved = localStorage.getItem('milkBillSettings');
+        if (saved) return JSON.parse(saved);
+        return {
+            custName: "Farook", custAddress: "1st Street", monthlyCharge: 20,
+            prices: { green: 25, blue: 22, orange: 30, purple: 35 },
+            defaults: { green: 3, blue: 0, orange: 0, purple: 0 }
+        };
+    }
+
+    function loadSettings() {
+        const s = getSettings();
+        document.getElementById('custName').value = s.custName;
+        document.getElementById('custAddress').value = s.custAddress;
+        document.getElementById('monthlyCharge').value = s.monthlyCharge;
+        ['Green', 'Blue', 'Orange', 'Purple'].forEach(color => {
+            document.getElementById(`price${color}`).value = s.prices[color.toLowerCase()];
+            document.getElementById(`def${color}`).value = s.defaults[color.toLowerCase()];
+        });
+    }
+
+    function populateSelectors() {
+        const mSel = document.getElementById('monthSelect');
+        const ySel = document.getElementById('yearSelect');
+        months.forEach((m, i) => {
+            const opt = document.createElement('option');
+            opt.value = i; opt.text = m;
+            if(i === state.month) opt.selected = true;
+            mSel.appendChild(opt);
+        });
+        for(let i = state.year - 2; i <= state.year + 2; i++) {
+            const opt = document.createElement('option');
+            opt.value = i; opt.text = i;
+            if(i === state.year) opt.selected = true;
+            ySel.appendChild(opt);
+        }
+        mSel.addEventListener('change', (e) => { state.month = parseInt(e.target.value); state.daysData = {}; buildCalendar(); });
+        ySel.addEventListener('change', (e) => { state.year = parseInt(e.target.value); state.daysData = {}; buildCalendar(); });
+    }
+
+    function buildCalendar() {
+        const cal = document.getElementById('calendar');
+        cal.innerHTML = '';
+        const daysInMonth = new Date(state.year, state.month + 1, 0).getDate();
+        for(let d = 1; d <= daysInMonth; d++) {
+            if(!state.daysData[d]) state.daysData[d] = { type: 'default' };
+            const btn = document.createElement('button');
+            btn.className = `day-btn ${getStateClass(state.daysData[d].type)}`;
+            btn.innerHTML = `${d}<br><span>${getStateLabel(state.daysData[d].type)}</span>`;
+            btn.onclick = () => handleDayClick(d);
+            cal.appendChild(btn);
+        }
+    }
+
+    function getStateClass(type) {
+        if(type === 'default') return 'state-default';
+        if(type === 'none') return 'state-none';
+        return 'state-custom';
+    }
+
+    function getStateLabel(type) {
+        if(type === 'default') return 'Usual';
+        if(type === 'none') return 'None';
+        return 'Custom';
+    }
+
+    function handleDayClick(day) {
+        const currentType = state.daysData[day].type;
+        if(currentType === 'default') {
+            state.daysData[day].type = 'none';
+            buildCalendar();
+        } else if (currentType === 'none') {
+            openModal(day);
+        } else {
+            state.daysData[day] = { type: 'default' };
+            buildCalendar();
+        }
+    }
+
+    function openModal(day) {
+        activeModalDay = day;
+        document.getElementById('modalDay').innerText = day;
+        const s = getSettings();
+        ['Green', 'Blue', 'Orange', 'Purple'].forEach(color => {
+            document.getElementById(`mod${color}`).value = s.defaults[color.toLowerCase()];
+        });
+        document.getElementById('customModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('customModal').style.display = 'none';
+        activeModalDay = null;
+    }
+
+    function saveCustomOrder() {
+        const customQty = {
+            green: parseInt(document.getElementById('modGreen').value) || 0,
+            blue: parseInt(document.getElementById('modBlue').value) || 0,
+            orange: parseInt(document.getElementById('modOrange').value) || 0,
+            purple: parseInt(document.getElementById('modPurple').value) || 0,
+        };
+        const total = Object.values(customQty).reduce((a,b)=>a+b, 0);
+        if(total === 0) {
+            state.daysData[activeModalDay] = { type: 'none' };
+        } else {
+            state.daysData[activeModalDay] = { type: 'custom', qty: customQty };
+        }
+        closeModal();
+        buildCalendar();
+    }
+
+    function getOrdinal(n) {
+        const s = ["th", "st", "nd", "rd"];
+        const v = n % 100;
+        return n + (s[(v - 20) % 10] || s[v] || s[0]);
+    }
+
+    function generateBill() {
+        const s = getSettings();
+        const daysInMonth = new Date(state.year, state.month + 1, 0).getDate();
+        let groups = {}; 
+        let noMilkDays = [];
+        let grandTotal = 0;
+
+        for(let d = 1; d <= daysInMonth; d++) {
+            const dayData = state.daysData[d];
+            if(dayData.type === 'none') {
+                noMilkDays.push(d);
+                continue;
+            }
+            let qty = dayData.type === 'default' ? s.defaults : dayData.qty;
+            let descParts = [];
+            let dayPrice = 0;
+            ['green', 'blue', 'orange', 'purple'].forEach(color => {
+                if(qty[color] > 0) {
+                    descParts.push(`${qty[color]} ${color.charAt(0).toUpperCase() + color.slice(1)}`);
+                    dayPrice += qty[color] * s.prices[color];
+                }
+            });
+            if(descParts.length === 0) {
+                noMilkDays.push(d); 
+                continue;
+            }
+            const descString = descParts.join(' & ');
+            if(!groups[descString]) {
+                groups[descString] = { count: 0, pricePerDay: dayPrice };
+            }
+            groups[descString].count++;
+            grandTotal += dayPrice;
+        }
+
+        grandTotal += s.monthlyCharge;
+
+        let txt = `Milk Bill ${months[state.month]} Month\n`;
+        txt += `${s.custName}\n${s.custAddress}\n\n`;
+
+        Object.keys(groups).forEach(desc => {
+            const grp = groups[desc];
+            const lineTotal = grp.count * grp.pricePerDay;
+            txt += `${grp.count} Days x ₹ ${grp.pricePerDay} (${desc}) = ₹ ${lineTotal}\n`;
+        });
+
+        if(s.monthlyCharge > 0) {
+            txt += `Charge`.padEnd(31, ' ') + ` = ₹ ${s.monthlyCharge}\n`;
+        }
+        txt += `__________________________________\n`;
+        txt += `Total`.padEnd(31, ' ') + ` = ₹ ${grandTotal}\n`;
+
+        if(noMilkDays.length > 0) {
+            const formattedDates = noMilkDays.map(getOrdinal).join(', ');
+            txt += `No Milk on ${formattedDates}\n`;
+        } else {
+            txt += `Milk delivered on all days\n`;
+        }
+
+        document.getElementById('billOutput').innerText = txt;
+        document.getElementById('resultCard').style.display = 'block';
+        document.getElementById('resultCard').scrollIntoView({behavior: 'smooth'});
+    }
+
+    async function copyBill() {
+        const txt = document.getElementById('billOutput').innerText;
+        try {
+            await navigator.clipboard.writeText(txt);
+            alert("Bill copied to clipboard!");
+        } catch(err) {
+            alert("Failed to copy. Please select and copy the text manually.");
+        }
+    }
+
+    window.onload = init;
+</script>
+</body>
 </html>
