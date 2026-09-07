@@ -298,11 +298,12 @@
         return n + (s[(v - 20) % 10] || s[v] || s[0]);
     }
 
-    function generateBill() {
+   function generateBill() {
         const s = getSettings();
         const daysInMonth = new Date(state.year, state.month + 1, 0).getDate();
         let groups = {}; 
         let noMilkDays = [];
+        let customNotes = []; // Tracks the custom day notes
         let grandTotal = 0;
 
         for(let d = 1; d <= daysInMonth; d++) {
@@ -311,25 +312,41 @@
                 noMilkDays.push(d);
                 continue;
             }
+            
             let qty = dayData.type === 'default' ? s.defaults : dayData.qty;
             let descParts = [];
+            let customDescParts = []; 
             let dayPrice = 0;
+            
             ['green', 'blue', 'orange', 'purple'].forEach(color => {
                 if(qty[color] > 0) {
-                    descParts.push(`${qty[color]} ${color.charAt(0).toUpperCase() + color.slice(1)}`);
+                    let itemName = color.charAt(0).toUpperCase() + color.slice(1);
+                    descParts.push(`${qty[color]} ${itemName}`);
                     dayPrice += qty[color] * s.prices[color];
+                    
+                    // If it is a custom day, build the specific note text
+                    if(dayData.type === 'custom') {
+                        customDescParts.push(`${qty[color]} ${itemName}`);
+                    }
                 }
             });
+            
             if(descParts.length === 0) {
                 noMilkDays.push(d); 
                 continue;
             }
+            
             const descString = descParts.join(' & ');
             if(!groups[descString]) {
                 groups[descString] = { count: 0, pricePerDay: dayPrice };
             }
             groups[descString].count++;
             grandTotal += dayPrice;
+
+            // Save the custom note for the end of the bill
+            if(dayData.type === 'custom' && customDescParts.length > 0) {
+                customNotes.push(`${customDescParts.join(' and ')} on ${getOrdinal(d)}`);
+            }
         }
 
         grandTotal += s.monthlyCharge;
@@ -354,6 +371,11 @@
             txt += `No Milk on ${formattedDates}\n`;
         } else {
             txt += `Milk delivered on all days\n`;
+        }
+        
+        // Print the custom notes below the No Milk section
+        if (customNotes.length > 0) {
+            txt += customNotes.join('\n') + '\n';
         }
 
         document.getElementById('billOutput').innerText = txt;
